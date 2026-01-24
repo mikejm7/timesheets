@@ -12,11 +12,13 @@ namespace timesheets.Services
     public class ApiService
     {
         private readonly HttpClient _client;
+        private readonly OfflineQueueService _offlineService;
 
         public ApiService()
         {
             _client = new HttpClient();
             _client.BaseAddress = new Uri(GetBaseUrl());
+            _offlineService = new OfflineQueueService();
         }
 
         private string GetBaseUrl()
@@ -59,7 +61,7 @@ namespace timesheets.Services
             return await Task.FromResult(new Dictionary<string, string>());
         }
 
-        public async Task<bool> SubmitTimeEntryAsync(TimeEntryModel entry)
+        public async Task<bool> SubmitTimeEntryAsync(TimeEntryModel entry, bool enableOfflineQueue = true)
         {
             try
             {
@@ -75,11 +77,16 @@ namespace timesheets.Services
             }
             catch (Exception)
             {
+                if (enableOfflineQueue)
+                {
+                    _offlineService.Enqueue(entry);
+                    return true;
+                }
                 return false;
             }
         }
 
-        public async Task<bool> SubmitBatchAsync(List<TimeEntryModel> entries)
+        public async Task<bool> SubmitBatchAsync(List<TimeEntryModel> entries, bool enableOfflineQueue = true)
         {
              try
             {
@@ -98,6 +105,11 @@ namespace timesheets.Services
             }
             catch (Exception)
             {
+                if (enableOfflineQueue)
+                {
+                    _offlineService.EnqueueBatch(entries);
+                    return true;
+                }
                 return false;
             }
         }
@@ -107,6 +119,11 @@ namespace timesheets.Services
             // Mock logic
             await Task.Delay(500);
             return true;
+        }
+
+        public async Task ProcessOfflineQueueAsync()
+        {
+            await _offlineService.ProcessQueueAsync(this);
         }
     }
 }
