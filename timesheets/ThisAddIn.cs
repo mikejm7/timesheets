@@ -141,11 +141,24 @@ namespace timesheets
                 appt.Save();
 
                 // Sync to API
-                _apiService.SubmitTimeEntryAsync(model);
+                SafeSubmitAsync(model);
             }
             finally
             {
                 _isUpdating = false;
+            }
+        }
+
+        private async void SafeSubmitAsync(TimeEntryModel model)
+        {
+            try
+            {
+                await _apiService.SubmitTimeEntryAsync(model);
+            }
+            catch (Exception ex)
+            {
+                // In a real app, log this.
+                System.Diagnostics.Debug.WriteLine($"Error submitting time entry: {ex.Message}");
             }
         }
 
@@ -204,7 +217,7 @@ namespace timesheets
                     };
 
                     // Fire and forget sync
-                    _apiService.SubmitTimeEntryAsync(model);
+                    SafeSubmitAsync(model);
                 }
                 finally
                 {
