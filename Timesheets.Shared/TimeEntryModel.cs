@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace timesheets.Models
+namespace Timesheets.Shared
 {
     public class TimeEntryModel
     {

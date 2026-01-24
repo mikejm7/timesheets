@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using timesheets.Models;
+using Timesheets.Shared;
 using timesheets.Services;
 
 namespace timesheets.Forms

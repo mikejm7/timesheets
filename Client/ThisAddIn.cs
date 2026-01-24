@@ -7,7 +7,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 using Office = Microsoft.Office.Core;
 using timesheets.Services;
 using timesheets.Forms;
-using timesheets.Models;
+using Timesheets.Shared;
 using System.Windows.Forms;
 
 namespace timesheets
