@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+  <ribbon>
+    <tabs>
+      <tab id="tabTimesheets" label="Timesheets">
+        <group id="grpAssignments" label="Batch Assignment">
+          <dropDown id="cmbActiveJob" label="Job"
+                    getItemCount="GetJobCount"
+                    getItemLabel="GetJobLabel"
+                    getItemID="GetJobID"
+                    onAction="OnJobChanged"
+                    getSelectedItemIndex="GetSelectedJobIndex" />
+          <dropDown id="cmbActiveTask" label="Task"
+                    getItemCount="GetTaskCount"
+                    getItemLabel="GetTaskLabel"
+                    getItemID="GetTaskID"
+                    onAction="OnTaskChanged"
+                    getSelectedItemIndex="GetSelectedTaskIndex"/>
+          <button id="btnAssignSelected" label="Assign Selected" size="large" onAction="AssignSelected_Click" imageMso="AppointmentColorDialog" />
+        </group>
+        <group id="grpSubmission" label="Submission">
+          <button id="btnSubmitWeek" label="Submit Week" size="large" onAction="SubmitWeek_Click" imageMso="FileSubmit" />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>
