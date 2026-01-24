@@ -1,4 +1,4 @@
-namespace Timesheets.API.Models
+namespace Timesheets.Shared
 {
     public class Job
     {

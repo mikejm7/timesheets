@@ -5,5 +5,11 @@
     <Setting Name="RecentJobIds" Type="System.Collections.Specialized.StringCollection" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="ApiBaseUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://localhost:7053/</Value>
+    </Setting>
+    <Setting Name="ApiKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">YOUR_SECURE_KEY</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

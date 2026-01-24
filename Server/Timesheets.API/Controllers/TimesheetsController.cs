@@ -41,12 +41,21 @@ namespace Timesheets.API.Controllers
         [HttpPost("batch")]
         public async Task<IActionResult> PostBatch(List<TimeEntryModel> entries)
         {
-            using var transaction = _context.Database.BeginTransaction();
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                var ids = entries.Select(e => e.OutlookID).ToList();
+                var existingIds = await _context.TimeEntries
+                    .AsNoTracking()
+                    .Where(e => ids.Contains(e.OutlookID))
+                    .Select(e => e.OutlookID)
+                    .ToListAsync();
+
+                var existingIdSet = new HashSet<string>(existingIds);
+
                 foreach (var entry in entries)
                 {
-                    if (TimeEntryExists(entry.OutlookID))
+                    if (existingIdSet.Contains(entry.OutlookID))
                     {
                         _context.Update(entry);
                     }

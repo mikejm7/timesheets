@@ -11,23 +11,21 @@ namespace timesheets.Services
 {
     public class ApiService
     {
-        private readonly HttpClient _client;
+        private static readonly HttpClient _client;
         private readonly OfflineQueueService _offlineService;
+
+        static ApiService()
+        {
+            _client = new HttpClient();
+            var baseUrl = timesheets.Properties.Settings.Default.ApiBaseUrl;
+            if (string.IsNullOrEmpty(baseUrl)) baseUrl = "https://localhost:7053/"; // Fallback
+            _client.BaseAddress = new Uri(baseUrl);
+            _client.DefaultRequestHeaders.Add("X-Api-Key", timesheets.Properties.Settings.Default.ApiKey);
+        }
 
         public ApiService()
         {
-            _client = new HttpClient();
-            _client.BaseAddress = new Uri(GetBaseUrl());
             _offlineService = new OfflineQueueService();
-        }
-
-        private string GetBaseUrl()
-        {
-#if DEBUG
-            return "https://localhost:7053/";
-#else
-            return "https://api.your-production-site.com/";
-#endif
         }
 
         private class JobDto
@@ -48,8 +46,9 @@ namespace timesheets.Services
                 // Map Code to Name
                 return jobs.ToDictionary(j => j.Code, j => j.Name);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error getting jobs: {ex.Message}");
                 // Fallback or empty if offline
                 return new Dictionary<string, string>();
             }
