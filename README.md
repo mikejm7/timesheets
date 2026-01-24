@@ -12,8 +12,9 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 
 - **Outlook Integration**: Manage time entries directly within the Outlook Calendar (Shadow Copy workflow).
 - **Backend API**: RESTful API to store Jobs and Time Entries using SQLite.
-- **Shared Models**: `TimeEntryModel` is shared between Client and Server to ensure consistency.
-- **Offline/Sync**: The client synchronizes changes with the backend (via `ApiService`).
+- **Shared Models**: `TimeEntryModel` and `Job` are shared between Client and Server to ensure consistency.
+- **Offline/Sync**: The client synchronizes changes with the backend using an Offline Queue.
+- **Security**: Basic API Key authentication.
 
 ## Prerequisites
 
@@ -49,20 +50,19 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 1.  Set `timesheets` (in the `Client` folder) as the Startup Project.
 2.  Ensure the API is running (or running in the background).
 3.  Run (F5). Outlook will launch with the add-in.
+4.  **Configuration**: The Client uses user-scoped settings for the API URL and Key.
+    - `ApiBaseUrl`: Defaults to `https://localhost:7053/`.
+    - `ApiKey`: Defaults to `YOUR_SECURE_KEY`. Update this in `Properties.Settings` or the app's configuration if you change the server key.
 
 ### Ngrok Setup (Optional for Remote/HTTPS testing)
 1.  Install Ngrok.
 2.  Run `ngrok http [PORT]`.
 3.  Copy the forwarding URL.
+4.  Update the Client's `ApiBaseUrl` setting.
 
-## Usage
+## Architecture & Notes
 
-1.  **Ribbon**: Go to the "Timesheets" tab in Outlook.
-2.  **Jobs**: The dropdown loads jobs from the API (`GET /api/jobs`).
-3.  **Assign**: Select calendar items -> "Assign Selected". Copies them to the "Timesheets" sub-calendar and POSTs to `/api/timesheets`.
-4.  **Edit**: Double-click an item in "Timesheets" folder to open the custom form. Saves update the API.
-
-## Notes
-
-- The database is a local SQLite file (`timesheets.db`) created in the API execution directory.
-- The VSTO Client is configured to talk to `localhost`. Ensure CORS is enabled on the server (already configured in `Program.cs`).
+- **Database**: Local SQLite file (`timesheets.db`).
+- **Resilience**: The Client uses an offline queue with a "Rename & Lock" strategy to ensure data integrity during sync.
+- **Performance**: The Server uses efficient batch processing (bulk ID lookup) to minimize database round-trips.
+- **Security**: The Server requires an `X-Api-Key` header for all requests.

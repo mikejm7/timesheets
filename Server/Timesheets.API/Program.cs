@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timesheets.API.Data;
-using Timesheets.API.Models;
+using Timesheets.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +35,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+
+// API Key Middleware
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Headers.TryGetValue("X-Api-Key", out var extractedApiKey) || extractedApiKey != "YOUR_SECURE_KEY")
+    {
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Unauthorized");
+        return;
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();

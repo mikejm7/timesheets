@@ -11,6 +11,7 @@ namespace timesheets.Services
     public class OfflineQueueService
     {
         private readonly string _filePath;
+        private static readonly object _lock = new object();
 
         public OfflineQueueService()
         {
@@ -20,36 +21,70 @@ namespace timesheets.Services
 
         public void Enqueue(TimeEntryModel entry)
         {
-            try
+            lock (_lock)
             {
-                string json = JsonConvert.SerializeObject(entry);
-                File.AppendAllText(_filePath, json + Environment.NewLine);
+                try
+                {
+                    string json = JsonConvert.SerializeObject(entry);
+                    File.AppendAllText(_filePath, json + Environment.NewLine);
+                }
+                catch (Exception) { /* Best effort */ }
             }
-            catch (Exception) { /* Best effort */ }
         }
 
         public void EnqueueBatch(List<TimeEntryModel> entries)
         {
-            try
+            lock (_lock)
             {
-                 foreach(var entry in entries)
-                 {
-                     string json = JsonConvert.SerializeObject(entry);
-                     File.AppendAllText(_filePath, json + Environment.NewLine);
-                 }
+                try
+                {
+                     foreach(var entry in entries)
+                     {
+                         string json = JsonConvert.SerializeObject(entry);
+                         File.AppendAllText(_filePath, json + Environment.NewLine);
+                     }
+                }
+                catch (Exception) { /* Best effort */ }
             }
-            catch (Exception) { /* Best effort */ }
         }
 
         public async Task ProcessQueueAsync(ApiService apiService)
         {
-            if (!File.Exists(_filePath)) return;
+            string processingPath = _filePath + ".processing";
+            bool hasProcessingFile = false;
+
+            lock (_lock)
+            {
+                // Recover from previous crash
+                if (File.Exists(processingPath))
+                {
+                    try
+                    {
+                        var leftover = File.ReadAllText(processingPath);
+                        File.AppendAllText(_filePath, leftover);
+                        File.Delete(processingPath);
+                    }
+                    catch { return; }
+                }
+
+                if (File.Exists(_filePath))
+                {
+                    try
+                    {
+                        File.Move(_filePath, processingPath);
+                        hasProcessingFile = true;
+                    }
+                    catch { return; }
+                }
+            }
+
+            if (!hasProcessingFile) return;
 
             List<TimeEntryModel> allEntries = new List<TimeEntryModel>();
 
             try
             {
-                var lines = File.ReadAllLines(_filePath);
+                var lines = File.ReadAllLines(processingPath);
                 foreach (var line in lines)
                 {
                     if (!string.IsNullOrWhiteSpace(line))
@@ -63,26 +98,38 @@ namespace timesheets.Services
                     }
                 }
             }
-            catch { return; } // File lock or other issue
+            catch { return; }
 
             if (allEntries.Count == 0)
             {
-                try { File.Delete(_filePath); } catch {}
+                try { File.Delete(processingPath); } catch {}
                 return;
             }
 
-            // Try to submit in batch. Disable auto-queue to avoid duplication if it fails.
             bool success = await apiService.SubmitBatchAsync(allEntries, enableOfflineQueue: false);
 
             if (success)
             {
                 try
                 {
-                    File.Delete(_filePath);
+                    File.Delete(processingPath);
                 }
                 catch {}
             }
-            // If failed, entries remain in file.
+            else
+            {
+                // Restore data
+                lock (_lock)
+                {
+                    try
+                    {
+                        var content = File.ReadAllText(processingPath);
+                        File.AppendAllText(_filePath, content);
+                        File.Delete(processingPath);
+                    }
+                    catch { /* Best effort */ }
+                }
+            }
         }
     }
 }

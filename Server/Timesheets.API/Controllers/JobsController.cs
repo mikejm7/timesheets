@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.API.Data;
-using Timesheets.API.Models;
+using Timesheets.Shared;
 
 namespace Timesheets.API.Controllers
 {

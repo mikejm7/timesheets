@@ -32,7 +32,18 @@ namespace timesheets
             // Offline Timer
             _offlineTimer = new System.Windows.Forms.Timer();
             _offlineTimer.Interval = 300000; // 5 mins
-            _offlineTimer.Tick += async (s, ev) => await _apiService.ProcessOfflineQueueAsync();
+            _offlineTimer.Tick += async (s, ev) =>
+            {
+                _offlineTimer.Stop();
+                try
+                {
+                    await _apiService.ProcessOfflineQueueAsync();
+                }
+                finally
+                {
+                    _offlineTimer.Start();
+                }
+            };
             _offlineTimer.Start();
 
             // Dashboard

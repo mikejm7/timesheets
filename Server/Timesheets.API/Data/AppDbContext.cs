@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Timesheets.API.Models;
 using Timesheets.Shared;
 
 namespace Timesheets.API.Data
@@ -15,6 +14,16 @@ namespace Timesheets.API.Data
         {
             modelBuilder.Entity<TimeEntryModel>()
                 .HasKey(t => t.OutlookID);
+
+            modelBuilder.Entity<Job>()
+                .HasIndex(j => j.Code)
+                .IsUnique();
+
+            modelBuilder.Entity<TimeEntryModel>()
+                .HasOne<Job>()
+                .WithMany()
+                .HasForeignKey(t => t.JobId)
+                .HasPrincipalKey(j => j.Code);
         }
     }
 }
