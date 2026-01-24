@@ -24,6 +24,7 @@ This repository contains a full-stack solution for managing timesheets via Outlo
     - "ASP.NET and web development"
 - **Microsoft Outlook** (Desktop version).
 - **.NET 8 SDK**.
+- **EF Core tools**: Run `dotnet tool install --global dotnet-ef` to install.
 
 ## Getting Started
 
@@ -32,17 +33,27 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 2.  Open `Timesheets.sln` in Visual Studio.
 3.  Restore NuGet packages for the solution.
 
-### 2. Run the Server
-1.  Set `Timesheets.API` as the Startup Project (or configure Multiple Startup Projects).
-2.  Run the project.
-3.  The API will start (default `http://localhost:5000` or `https://localhost:7001`).
+### 2. Database Setup
+1.  Navigate to `/Server`.
+2.  Run `dotnet ef migrations add InitialCreate`.
+3.  Run `dotnet ef database update`.
+
+### 3. Run the Server
+1.  Navigate to `/Server/Timesheets.API` (or set as Startup Project in VS).
+2.  Run `dotnet run` or press F5 in Visual Studio.
+3.  The API will start (check output for ports, e.g., `https://localhost:7053`).
 4.  On first run, it will create `timesheets.db` (SQLite) and seed it with dummy Jobs.
     - Check Swagger UI at `/swagger/index.html`.
 
-### 3. Run the Client
+### 4. Run the Client
 1.  Set `timesheets` (in the `Client` folder) as the Startup Project.
 2.  Ensure the API is running (or running in the background).
 3.  Run (F5). Outlook will launch with the add-in.
+
+### Ngrok Setup (Optional for Remote/HTTPS testing)
+1.  Install Ngrok.
+2.  Run `ngrok http [PORT]`.
+3.  Copy the forwarding URL.
 
 ## Usage
 
@@ -55,4 +66,3 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 
 - The database is a local SQLite file (`timesheets.db`) created in the API execution directory.
 - The VSTO Client is configured to talk to `localhost`. Ensure CORS is enabled on the server (already configured in `Program.cs`).
-

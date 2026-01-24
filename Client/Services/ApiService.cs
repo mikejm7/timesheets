@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Timesheets.Shared;
@@ -10,62 +11,101 @@ namespace timesheets.Services
 {
     public class ApiService
     {
-        // Mock data
-        private Dictionary<string, string> _jobs = new Dictionary<string, string>
-        {
-            { "J001", "Project Alpha" },
-            { "J002", "Project Beta" },
-            { "J003", "Internal Ops" }
-        };
+        private readonly HttpClient _client;
 
-        private Dictionary<string, Dictionary<string, string>> _tasks = new Dictionary<string, Dictionary<string, string>>
+        public ApiService()
         {
-            { "J001", new Dictionary<string, string> { { "T01", "Design" }, { "T02", "Dev" } } },
-            { "J002", new Dictionary<string, string> { { "T03", "Testing" }, { "T04", "Deploy" } } },
-            { "J003", new Dictionary<string, string> { { "T05", "Meeting" }, { "T06", "Admin" } } }
-        };
+            _client = new HttpClient();
+            _client.BaseAddress = new Uri(GetBaseUrl());
+        }
+
+        private string GetBaseUrl()
+        {
+#if DEBUG
+            return "https://localhost:7053/";
+#else
+            return "https://api.your-production-site.com/";
+#endif
+        }
+
+        private class JobDto
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public string Code { get; set; }
+        }
 
         public async Task<Dictionary<string, string>> GetJobsAsync()
         {
-            await Task.Delay(500); // Simulate network latency
-            return new Dictionary<string, string>(_jobs);
+            try
+            {
+                var response = await _client.GetAsync("api/jobs");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                var jobs = JsonConvert.DeserializeObject<List<JobDto>>(json);
+                // Map Code to Name
+                return jobs.ToDictionary(j => j.Code, j => j.Name);
+            }
+            catch (Exception)
+            {
+                // Fallback or empty if offline
+                return new Dictionary<string, string>();
+            }
         }
 
         public async Task<Dictionary<string, string>> GetTasksAsync(string jobId)
         {
-            await Task.Delay(300);
-            if (_tasks.ContainsKey(jobId))
-            {
-                return new Dictionary<string, string>(_tasks[jobId]);
-            }
-            return new Dictionary<string, string>();
+            // API doesn't support tasks yet, return empty
+            return await Task.FromResult(new Dictionary<string, string>());
         }
 
         public async Task<bool> SubmitTimeEntryAsync(TimeEntryModel entry)
         {
-            await Task.Delay(1000);
-            string json = JsonConvert.SerializeObject(entry);
-            // Simulate sending JSON to API
-            // Console.WriteLine($"Submitting: {json}");
-            entry.Status = "Submitted";
-            return true;
+            try
+            {
+                string json = JsonConvert.SerializeObject(entry);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _client.PostAsync("api/timesheets", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    entry.Status = "Submitted";
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<bool> SubmitBatchAsync(List<TimeEntryModel> entries)
         {
-            await Task.Delay(1500);
-            foreach (var entry in entries)
+             try
             {
-                // Simulate processing
-                entry.Status = "Submitted";
+                string json = JsonConvert.SerializeObject(entries);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _client.PostAsync("api/timesheets/batch", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    foreach (var entry in entries)
+                    {
+                        entry.Status = "Submitted";
+                    }
+                    return true;
+                }
+                return false;
             }
-            return true;
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public async Task<bool> LockWeekAsync(DateTime weekStart)
         {
+            // Mock logic
             await Task.Delay(500);
-            // Simulate locking logic
             return true;
         }
     }
