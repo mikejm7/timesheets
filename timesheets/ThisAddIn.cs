@@ -15,7 +15,7 @@ namespace timesheets
     public partial class ThisAddIn
     {
         private Outlook.Inspectors _inspectors;
-        private Outlook.Items _calendarItems;
+        private Outlook.Items _timesheetItems;
         private ApiService _apiService;
         private bool _isUpdating = false;
 
@@ -30,13 +30,12 @@ namespace timesheets
             _inspectors = this.Application.Inspectors;
             _inspectors.NewInspector += Inspectors_NewInspector;
 
-            // Hook Calendar Items for Smart Resize
-            Outlook.Folder calendarFolder =
-                this.Application.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderCalendar) as Outlook.Folder;
-            if (calendarFolder != null)
+            // Hook Calendar Items for Smart Resize - ONLY in Timesheets folder
+            Outlook.MAPIFolder timesheetFolder = GetTimesheetFolder();
+            if (timesheetFolder != null)
             {
-                _calendarItems = calendarFolder.Items;
-                _calendarItems.ItemChange += Items_ItemChange;
+                _timesheetItems = timesheetFolder.Items;
+                _timesheetItems.ItemChange += Items_ItemChange;
             }
         }
 
@@ -60,17 +59,21 @@ namespace timesheets
         {
             if (Inspector.CurrentItem is Outlook.AppointmentItem appt)
             {
-                // Check if this appointment is tracked by our system
-                string jobId = GetUserProperty(appt, "JobID");
-
-                if (!string.IsNullOrEmpty(jobId))
+                // Ensure we only interfere if the item is in the "Timesheets" folder
+                if (appt.Parent is Outlook.Folder folder && folder.Name == "Timesheets")
                 {
-                    // It's a tracked item. Close the native inspector.
-                    // olDiscard ensures changes aren't prompted for save, though we haven't made any yet.
-                    ((Outlook._Inspector)Inspector).Close(Outlook.OlInspectorClose.olDiscard);
+                    // Check if this appointment is tracked by our system
+                    string jobId = GetUserProperty(appt, "JobID");
 
-                    // Open the Custom Form
-                    OpenCustomForm(appt);
+                    if (!string.IsNullOrEmpty(jobId))
+                    {
+                        // It's a tracked item. Close the native inspector.
+                        // olDiscard ensures changes aren't prompted for save, though we haven't made any yet.
+                        ((Outlook._Inspector)Inspector).Close(Outlook.OlInspectorClose.olDiscard);
+
+                        // Open the Custom Form
+                        OpenCustomForm(appt);
+                    }
                 }
             }
         }
@@ -211,6 +214,19 @@ namespace timesheets
         }
 
         #region Helper Methods
+
+        public Outlook.MAPIFolder GetTimesheetFolder()
+        {
+            Outlook.Folder calendar = this.Application.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderCalendar) as Outlook.Folder;
+            try
+            {
+                return calendar.Folders["Timesheets"];
+            }
+            catch
+            {
+                return calendar.Folders.Add("Timesheets", Outlook.OlDefaultFolders.olFolderCalendar);
+            }
+        }
 
         public void SetUserProperty(Outlook.AppointmentItem item, string name, object value)
         {
