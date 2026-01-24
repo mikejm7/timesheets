@@ -147,44 +147,58 @@ namespace timesheets.UI
                 Microsoft.Office.Interop.Outlook.Explorer explorer = Globals.ThisAddIn.Application.ActiveExplorer();
                 if (explorer == null || explorer.Selection.Count == 0) return;
 
+                Outlook.MAPIFolder timesheetFolder = Globals.ThisAddIn.GetTimesheetFolder();
+                if (timesheetFolder == null)
+                {
+                    MessageBox.Show("Could not find or create Timesheets folder.");
+                    return;
+                }
+
                 List<TimeEntryModel> batchEntries = new List<TimeEntryModel>();
 
                 foreach (object item in explorer.Selection)
                 {
                     if (item is AppointmentItem appt)
                     {
-                        // Check Status
-                        string status = GetUserProperty(appt, "TimeStatus");
-                        if (status == "Submitted") continue;
-
-                        // Calculate RT (Duration is in minutes, convert to hours)
-                        double rt = appt.Duration / 60.0;
-
-                        // Update Properties
-                        Globals.ThisAddIn.SetUserProperty(appt, "JobID", _selectedJobId);
-                        Globals.ThisAddIn.SetUserProperty(appt, "TaskID", _selectedTaskId);
-                        Globals.ThisAddIn.SetUserProperty(appt, "TimeStatus", "Draft");
-                        Globals.ThisAddIn.SetUserProperty(appt, "RT", rt);
-
-                        // Update Visuals
-                        string jobName = _jobs.ContainsKey(_selectedJobId) ? _jobs[_selectedJobId] : _selectedJobId;
-                        string taskName = _tasks.ContainsKey(_selectedTaskId) ? _tasks[_selectedTaskId] : _selectedTaskId;
-
-                        appt.Subject = $"{jobName} - {taskName}";
-                        appt.Categories = "Draft Time";
-                        appt.Save();
-
-                        // Add to batch
-                        batchEntries.Add(new TimeEntryModel
+                        // Create Copy
+                        AppointmentItem copy = appt.Copy() as AppointmentItem;
+                        if (copy != null)
                         {
-                            OutlookID = appt.EntryID,
-                            JobId = _selectedJobId,
-                            TaskId = _selectedTaskId,
-                            Date = appt.Start,
-                            RT = rt,
-                            TotalHours = rt,
-                            Status = "Draft"
-                        });
+                            // Move to Timesheets folder
+                            AppointmentItem movedItem = copy.Move(timesheetFolder) as AppointmentItem;
+
+                            if (movedItem != null)
+                            {
+                                // Calculate RT (Duration is in minutes, convert to hours)
+                                double rt = movedItem.Duration / 60.0;
+
+                                // Update Properties on the COPY
+                                Globals.ThisAddIn.SetUserProperty(movedItem, "JobID", _selectedJobId);
+                                Globals.ThisAddIn.SetUserProperty(movedItem, "TaskID", _selectedTaskId);
+                                Globals.ThisAddIn.SetUserProperty(movedItem, "TimeStatus", "Draft");
+                                Globals.ThisAddIn.SetUserProperty(movedItem, "RT", rt);
+
+                                // Update Visuals on the COPY
+                                string jobName = _jobs.ContainsKey(_selectedJobId) ? _jobs[_selectedJobId] : _selectedJobId;
+                                string taskName = _tasks.ContainsKey(_selectedTaskId) ? _tasks[_selectedTaskId] : _selectedTaskId;
+
+                                movedItem.Subject = $"{jobName} - {taskName}";
+                                movedItem.Categories = "Draft Time";
+                                movedItem.Save();
+
+                                // Add to batch using the COPY's details
+                                batchEntries.Add(new TimeEntryModel
+                                {
+                                    OutlookID = movedItem.EntryID,
+                                    JobId = _selectedJobId,
+                                    TaskId = _selectedTaskId,
+                                    Date = movedItem.Start,
+                                    RT = rt,
+                                    TotalHours = rt,
+                                    Status = "Draft"
+                                });
+                            }
+                        }
                     }
                 }
 
