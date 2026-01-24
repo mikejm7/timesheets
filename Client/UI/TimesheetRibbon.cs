@@ -206,48 +206,48 @@ namespace timesheets.UI
                             effectiveJobId = matched.Key;
                         }
 
-                        // Create Copy
-                        AppointmentItem copy = appt.Copy() as AppointmentItem;
-                        if (copy != null)
+                        // Create Shadow Copy (New Item)
+                        // Fix for Recurring Meetings: We create a fresh item instead of Copy() to break the recurrence link.
+                        AppointmentItem shadow = timesheetFolder.Items.Add("IPM.Appointment") as AppointmentItem;
+                        if (shadow != null)
                         {
-                            // Move to Timesheets folder
-                            AppointmentItem movedItem = copy.Move(timesheetFolder) as AppointmentItem;
+                            // Clone Properties
+                            shadow.Start = appt.Start;
+                            shadow.Duration = appt.Duration;
+                            shadow.AllDayEvent = appt.AllDayEvent;
 
-                            if (movedItem != null)
+                            // Calculate RT (Duration is in minutes, convert to hours)
+                            double rt = shadow.Duration / 60.0;
+
+                            // Update Properties on the SHADOW
+                            Globals.ThisAddIn.SetUserProperty(shadow, "JobID", effectiveJobId);
+                            Globals.ThisAddIn.SetUserProperty(shadow, "TaskID", _selectedTaskId);
+                            Globals.ThisAddIn.SetUserProperty(shadow, "TimeStatus", "Draft");
+                            Globals.ThisAddIn.SetUserProperty(shadow, "RT", rt);
+
+                            // Update Visuals on the SHADOW
+                            // We need Name for effectiveJobId. Lookup in _jobs.
+                            string jobName = _jobs.FirstOrDefault(j => j.Key == effectiveJobId).Value ?? effectiveJobId;
+                            string taskName = _tasks.ContainsKey(_selectedTaskId) ? _tasks[_selectedTaskId] : _selectedTaskId;
+
+                            shadow.Subject = $"{jobName} - {taskName}";
+                            shadow.Categories = "Draft Time";
+                            shadow.Save();
+
+                            // Add to batch using the SHADOW's details
+                            batchEntries.Add(new TimeEntryModel
                             {
-                                // Calculate RT (Duration is in minutes, convert to hours)
-                                double rt = movedItem.Duration / 60.0;
+                                OutlookID = shadow.EntryID,
+                                JobId = effectiveJobId,
+                                TaskId = _selectedTaskId,
+                                Date = shadow.Start,
+                                RT = rt,
+                                TotalHours = rt,
+                                Status = "Draft"
+                            });
 
-                                // Update Properties on the COPY
-                                Globals.ThisAddIn.SetUserProperty(movedItem, "JobID", effectiveJobId);
-                                Globals.ThisAddIn.SetUserProperty(movedItem, "TaskID", _selectedTaskId);
-                                Globals.ThisAddIn.SetUserProperty(movedItem, "TimeStatus", "Draft");
-                                Globals.ThisAddIn.SetUserProperty(movedItem, "RT", rt);
-
-                                // Update Visuals on the COPY
-                                // We need Name for effectiveJobId. Lookup in _jobs.
-                                string jobName = _jobs.FirstOrDefault(j => j.Key == effectiveJobId).Value ?? effectiveJobId;
-                                string taskName = _tasks.ContainsKey(_selectedTaskId) ? _tasks[_selectedTaskId] : _selectedTaskId;
-
-                                movedItem.Subject = $"{jobName} - {taskName}";
-                                movedItem.Categories = "Draft Time";
-                                movedItem.Save();
-
-                                // Add to batch using the COPY's details
-                                batchEntries.Add(new TimeEntryModel
-                                {
-                                    OutlookID = movedItem.EntryID,
-                                    JobId = effectiveJobId,
-                                    TaskId = _selectedTaskId,
-                                    Date = movedItem.Start,
-                                    RT = rt,
-                                    TotalHours = rt,
-                                    Status = "Draft"
-                                });
-
-                                // Add to Recents
-                                AddToRecents(effectiveJobId);
-                            }
+                            // Add to Recents
+                            AddToRecents(effectiveJobId);
                         }
                     }
                 }
