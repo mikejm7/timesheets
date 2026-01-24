@@ -20,7 +20,7 @@ namespace timesheets.UI
         private ApiService _apiService;
 
         // Cache for dropdowns
-        private Dictionary<string, string> _jobs = new Dictionary<string, string>();
+        private List<KeyValuePair<string, string>> _jobs = new List<KeyValuePair<string, string>>();
         private Dictionary<string, string> _tasks = new Dictionary<string, string>();
 
         private string _selectedJobId;
@@ -52,10 +52,38 @@ namespace timesheets.UI
         {
             try
             {
-                _jobs = await _apiService.GetJobsAsync();
+                var apiJobs = await _apiService.GetJobsAsync();
+                _jobs = new List<KeyValuePair<string, string>>();
+
+                // Load Recents
+                var recents = Properties.Settings.Default.RecentJobIds;
+                if (recents != null && recents.Count > 0)
+                {
+                    bool addedHeader = false;
+                    foreach (string id in recents)
+                    {
+                        if (apiJobs.ContainsKey(id))
+                        {
+                            _jobs.Add(new KeyValuePair<string, string>(id, apiJobs[id]));
+                            addedHeader = true;
+                        }
+                    }
+                    if (addedHeader)
+                    {
+                        _jobs.Add(new KeyValuePair<string, string>("-1", "--- Recent ---"));
+                    }
+                }
+
+                // Add All Jobs
+                foreach (var kvp in apiJobs)
+                {
+                    _jobs.Add(kvp);
+                }
+
                 if (_jobs.Count > 0)
                 {
-                    _selectedJobId = _jobs.Keys.First();
+                    _selectedJobId = _jobs.First().Key;
+                    if (_selectedJobId == "-1" && _jobs.Count > 1) _selectedJobId = _jobs[1].Key; // Skip separator if selected by default
                     await LoadTasks(_selectedJobId);
                 }
                 ribbon.InvalidateControl("cmbActiveJob");
@@ -86,18 +114,25 @@ namespace timesheets.UI
 
         public string GetJobLabel(Microsoft.Office.Core.IRibbonControl control, int index)
         {
-            return _jobs.Values.ElementAt(index);
+            return _jobs[index].Value;
         }
 
         public string GetJobID(Microsoft.Office.Core.IRibbonControl control, int index)
         {
-            return _jobs.Keys.ElementAt(index);
+            return _jobs[index].Key;
         }
 
         public int GetSelectedJobIndex(Microsoft.Office.Core.IRibbonControl control)
         {
             if (_selectedJobId == null) return 0;
-            return _jobs.Keys.ToList().IndexOf(_selectedJobId);
+            // Find index of selected ID.
+            // Note: Since we have duplicates (recents), this might pick the first occurrence (recent).
+            // That's fine/desired.
+            for (int i = 0; i < _jobs.Count; i++)
+            {
+                if (_jobs[i].Key == _selectedJobId) return i;
+            }
+            return 0;
         }
 
         public async void OnJobChanged(Microsoft.Office.Core.IRibbonControl control, string selectedId, int index)
@@ -138,9 +173,9 @@ namespace timesheets.UI
         {
             try
             {
-                if (string.IsNullOrEmpty(_selectedJobId) || string.IsNullOrEmpty(_selectedTaskId))
+                if (string.IsNullOrEmpty(_selectedJobId) || _selectedJobId == "-1" || string.IsNullOrEmpty(_selectedTaskId))
                 {
-                    MessageBox.Show("Please select a Job and Task first.");
+                    MessageBox.Show("Please select a valid Job and Task first.");
                     return;
                 }
 
@@ -160,6 +195,17 @@ namespace timesheets.UI
                 {
                     if (item is AppointmentItem appt)
                     {
+                        // Smart Guessing
+                        string effectiveJobId = _selectedJobId;
+                        string subject = appt.Subject ?? "";
+
+                        // Find a job that matches subject
+                        var matched = _jobs.FirstOrDefault(j => j.Key != "-1" && subject.IndexOf(j.Value, StringComparison.OrdinalIgnoreCase) >= 0);
+                        if (!string.IsNullOrEmpty(matched.Key))
+                        {
+                            effectiveJobId = matched.Key;
+                        }
+
                         // Create Copy
                         AppointmentItem copy = appt.Copy() as AppointmentItem;
                         if (copy != null)
@@ -173,13 +219,14 @@ namespace timesheets.UI
                                 double rt = movedItem.Duration / 60.0;
 
                                 // Update Properties on the COPY
-                                Globals.ThisAddIn.SetUserProperty(movedItem, "JobID", _selectedJobId);
+                                Globals.ThisAddIn.SetUserProperty(movedItem, "JobID", effectiveJobId);
                                 Globals.ThisAddIn.SetUserProperty(movedItem, "TaskID", _selectedTaskId);
                                 Globals.ThisAddIn.SetUserProperty(movedItem, "TimeStatus", "Draft");
                                 Globals.ThisAddIn.SetUserProperty(movedItem, "RT", rt);
 
                                 // Update Visuals on the COPY
-                                string jobName = _jobs.ContainsKey(_selectedJobId) ? _jobs[_selectedJobId] : _selectedJobId;
+                                // We need Name for effectiveJobId. Lookup in _jobs.
+                                string jobName = _jobs.FirstOrDefault(j => j.Key == effectiveJobId).Value ?? effectiveJobId;
                                 string taskName = _tasks.ContainsKey(_selectedTaskId) ? _tasks[_selectedTaskId] : _selectedTaskId;
 
                                 movedItem.Subject = $"{jobName} - {taskName}";
@@ -190,13 +237,16 @@ namespace timesheets.UI
                                 batchEntries.Add(new TimeEntryModel
                                 {
                                     OutlookID = movedItem.EntryID,
-                                    JobId = _selectedJobId,
+                                    JobId = effectiveJobId,
                                     TaskId = _selectedTaskId,
                                     Date = movedItem.Start,
                                     RT = rt,
                                     TotalHours = rt,
                                     Status = "Draft"
                                 });
+
+                                // Add to Recents
+                                AddToRecents(effectiveJobId);
                             }
                         }
                     }
@@ -206,12 +256,34 @@ namespace timesheets.UI
                 {
                     await _apiService.SubmitBatchAsync(batchEntries);
                     MessageBox.Show($"Assigned {batchEntries.Count} items.");
+                    Globals.ThisAddIn.UpdateDashboard();
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error assigning items: " + ex.Message);
             }
+        }
+
+        private void AddToRecents(string id)
+        {
+            if (id == "-1") return;
+            var settings = Properties.Settings.Default;
+            if (settings.RecentJobIds == null) settings.RecentJobIds = new System.Collections.Specialized.StringCollection();
+
+            var recents = settings.RecentJobIds;
+            if (recents.Contains(id))
+            {
+                recents.Remove(id);
+            }
+            recents.Insert(0, id);
+
+            while (recents.Count > 5)
+            {
+                recents.RemoveAt(recents.Count - 1);
+            }
+
+            settings.Save();
         }
 
         // Button: Submit Week

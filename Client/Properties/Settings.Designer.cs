@@ -12,5 +12,16 @@ namespace timesheets.Properties {
                 return defaultInstance;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.Collections.Specialized.StringCollection RecentJobIds {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["RecentJobIds"]));
+            }
+            set {
+                this["RecentJobIds"] = value;
+            }
+        }
     }
 }

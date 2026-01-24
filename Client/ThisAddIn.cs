@@ -18,6 +18,9 @@ namespace timesheets
         private Outlook.Items _timesheetItems;
         private ApiService _apiService;
         private bool _isUpdating = false;
+        private System.Windows.Forms.Timer _offlineTimer;
+        private Microsoft.Office.Tools.CustomTaskPane _dashboardPane;
+        private UI.DashboardControl _dashboardControl;
 
         public ApiService ApiService => _apiService;
 
@@ -25,6 +28,18 @@ namespace timesheets
         {
             // Initialize ApiService
             _apiService = new ApiService();
+
+            // Offline Timer
+            _offlineTimer = new System.Windows.Forms.Timer();
+            _offlineTimer.Interval = 300000; // 5 mins
+            _offlineTimer.Tick += async (s, ev) => await _apiService.ProcessOfflineQueueAsync();
+            _offlineTimer.Start();
+
+            // Dashboard
+            _dashboardControl = new UI.DashboardControl();
+            _dashboardPane = this.CustomTaskPanes.Add(_dashboardControl, "Weekly Progress");
+            _dashboardPane.DockPosition = Office.MsoCTPDockPosition.msoCTPDockPositionRight;
+            _dashboardPane.Visible = true;
 
             // Hook Inspectors to intercept opening items
             _inspectors = this.Application.Inspectors;
@@ -37,6 +52,8 @@ namespace timesheets
                 _timesheetItems = timesheetFolder.Items;
                 _timesheetItems.ItemChange += Items_ItemChange;
             }
+
+            UpdateDashboard();
         }
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
@@ -169,6 +186,8 @@ namespace timesheets
         /// <param name="Item">The item that changed.</param>
         private void Items_ItemChange(object Item)
         {
+            UpdateDashboard();
+
             if (_isUpdating) return;
             if (!(Item is Outlook.AppointmentItem appt)) return;
 
@@ -280,6 +299,39 @@ namespace timesheets
             // Simplification: Just update Category. Subject update usually happens on Assignment.
 
             item.Categories = "Draft Time";
+        }
+
+        public void UpdateDashboard()
+        {
+            try
+            {
+                Outlook.MAPIFolder folder = GetTimesheetFolder();
+                if (folder == null) return;
+
+                DateTime today = DateTime.Today;
+                int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime startOfWeek = today.AddDays(-1 * diff).Date;
+                DateTime endOfWeek = startOfWeek.AddDays(7).Date;
+
+                // Restrict items
+                string filter = $"[Start] >= '{startOfWeek:g}' AND [Start] < '{endOfWeek:g}'";
+                Outlook.Items items = folder.Items.Restrict(filter);
+
+                double totalMinutes = 0;
+                foreach (object item in items)
+                {
+                    if (item is Outlook.AppointmentItem appt)
+                    {
+                        totalMinutes += appt.Duration;
+                    }
+                }
+
+                if (_dashboardControl != null)
+                {
+                    _dashboardControl.UpdateProgress(totalMinutes / 60.0);
+                }
+            }
+            catch { /* Best effort */ }
         }
 
         #endregion
