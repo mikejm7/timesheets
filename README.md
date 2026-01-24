@@ -1,88 +1,58 @@
-# Outlook Timesheet Add-in
+# Outlook Timesheet Solution
 
-A VSTO (Visual Studio Tools for Office) Outlook Add-in that enables users to manage time entries directly within their Outlook Calendar.
+This repository contains a full-stack solution for managing timesheets via Outlook. It consists of a VSTO Outlook Add-in (Client) and an ASP.NET Core Web API (Server), sharing data models via a .NET Standard library.
 
-## Overview
+## Project Structure
 
-This add-in implements a "Shadow Copy" workflow where appointments can be copied to a dedicated "Timesheets" calendar folder. These items are then tracked with additional metadata (Job ID, Task ID, Regular Time, Overtime, etc.) and can be submitted to a backend API (mocked in this version).
+*   **Client/**: The VSTO Outlook Add-in (.NET Framework 4.8).
+*   **Server/**: The Backend Web API (ASP.NET Core 8.0, Entity Framework Core, SQLite).
+*   **Timesheets.Shared/**: Shared data models library (.NET Standard 2.0).
 
 ## Features
 
-- **Ribbon Interface**: A custom "Timesheets" tab in the Outlook Ribbon.
-- **Job & Task Selection**: Dropdowns to select active Jobs and Tasks.
-- **Assign & Track**: Convert selected calendar items into timesheet entries.
-- **Custom Form**: A custom WinForms dialog replaces the standard Outlook Inspector for tracked items, allowing detailed time entry editing.
-- **Smart Resize**: Dragging and resizing items in the "Timesheets" calendar automatically recalculates hours.
-- **Sync**: Changes are synchronized with a backend API.
-
-## Architecture
-
-The solution is structured as follows:
-
-- **Forms/**: Custom WinForms dialogs (`TimeEntryForm`) for editing time entries.
-- **Models/**: Data models (`TimeEntryModel`) representing the timesheet data.
-- **Services/**: `ApiService` handles communication with the backend (currently using mock data).
-- **UI/**: Ribbon XML and code-behind (`TimesheetRibbon`) for the Outlook UI integration.
-- **ThisAddIn.cs**: The main entry point, handling lifecycle events, Inspector interception, and Item changes.
+- **Outlook Integration**: Manage time entries directly within the Outlook Calendar (Shadow Copy workflow).
+- **Backend API**: RESTful API to store Jobs and Time Entries using SQLite.
+- **Shared Models**: `TimeEntryModel` is shared between Client and Server to ensure consistency.
+- **Offline/Sync**: The client synchronizes changes with the backend (via `ApiService`).
 
 ## Prerequisites
 
-- **Visual Studio 2019 or later** with the ".NET desktop development" and "Office/SharePoint development" workloads installed.
+- **Visual Studio 2022** (required for .NET 8 and VSTO development).
+- **Workloads**:
+    - ".NET desktop development"
+    - "Office/SharePoint development"
+    - "ASP.NET and web development"
 - **Microsoft Outlook** (Desktop version).
-- **.NET Framework 4.8**.
+- **.NET 8 SDK**.
 
 ## Getting Started
 
-1.  **Clone the repository**.
-2.  **Open the solution** (`timesheets.sln`) in Visual Studio.
-    *   *Note: If the solution file is missing, you can open the project file `timesheets/timesheets.csproj` directly and save a new solution.*
-3.  **Restore NuGet packages** (if any are missing).
-4.  **Build the project**.
-5.  **Run (F5)**: Visual Studio will launch Outlook with the add-in loaded.
+### 1. Setup
+1.  Clone the repository.
+2.  Open `Timesheets.sln` in Visual Studio.
+3.  Restore NuGet packages for the solution.
 
-## Usage Guide
+### 2. Run the Server
+1.  Set `Timesheets.API` as the Startup Project (or configure Multiple Startup Projects).
+2.  Run the project.
+3.  The API will start (default `http://localhost:5000` or `https://localhost:7001`).
+4.  On first run, it will create `timesheets.db` (SQLite) and seed it with dummy Jobs.
+    - Check Swagger UI at `/swagger/index.html`.
 
-### 1. The Timesheets Tab
-Locate the "Timesheets" tab in the Outlook Ribbon.
-- Use the **Active Job** and **Active Task** dropdowns to select the project you are working on.
+### 3. Run the Client
+1.  Set `timesheets` (in the `Client` folder) as the Startup Project.
+2.  Ensure the API is running (or running in the background).
+3.  Run (F5). Outlook will launch with the add-in.
 
-### 2. Creating Time Entries
-- Select one or more appointments in your main Calendar.
-- Click **Assign Selected** in the Timesheets Ribbon.
-- The items will be copied to the **Timesheets** calendar folder.
-- They will be tagged with the selected Job and Task.
+## Usage
 
-### 3. Editing Entries
-- Double-click an item in the **Timesheets** folder.
-- Instead of the standard Outlook window, a **Time Entry Form** will appear.
-- You can adjust:
-    - Regular Time (RT)
-    - Overtime (OT)
-    - Double Time (DT)
-    - Travel Time
-    - Notes
-- Click **Save** to update the item and sync to the API.
+1.  **Ribbon**: Go to the "Timesheets" tab in Outlook.
+2.  **Jobs**: The dropdown loads jobs from the API (`GET /api/jobs`).
+3.  **Assign**: Select calendar items -> "Assign Selected". Copies them to the "Timesheets" sub-calendar and POSTs to `/api/timesheets`.
+4.  **Edit**: Double-click an item in "Timesheets" folder to open the custom form. Saves update the API.
 
-### 4. Smart Resizing
-- You can drag or resize items directly in the **Timesheets** calendar view.
-- The "Regular Time" (RT) will automatically update based on the new duration (minus any OT/DT/Travel logged).
+## Notes
 
-### 5. Submitting
-- Click **Submit Week** (mock functionality) to lock entries for the current week.
+- The database is a local SQLite file (`timesheets.db`) created in the API execution directory.
+- The VSTO Client is configured to talk to `localhost`. Ensure CORS is enabled on the server (already configured in `Program.cs`).
 
-## Troubleshooting
-
-- **Add-in not loading?** Check `File > Options > Add-ins` in Outlook. If it's disabled, re-enable it.
-- **Developer Mode**: Ensure you are running in Debug configuration to see detailed errors if any occur.
-
-## Contributing
-
-1.  Fork the repository.
-2.  Create a feature branch.
-3.  Commit your changes.
-4.  Push to the branch.
-5.  Create a Pull Request.
-
-## License
-
-[License Name Here]

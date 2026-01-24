@@ -7,7 +7,7 @@ using Microsoft.Office.Tools.Ribbon;
 using Microsoft.Office.Interop.Outlook;
 using Microsoft.Office.Core;
 using timesheets.Services;
-using timesheets.Models;
+using Timesheets.Shared;
 using System.Windows.Forms;
 using System.Reflection;
 
