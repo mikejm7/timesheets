@@ -28,7 +28,7 @@ namespace timesheets.UI
 
         public TimesheetRibbon()
         {
-            _apiService = new ApiService();
+            _apiService = new ApiService(Properties.Settings.Default.ApiBaseUrl, Properties.Settings.Default.ApiKey);
         }
 
         #region IRibbonExtensibility Members

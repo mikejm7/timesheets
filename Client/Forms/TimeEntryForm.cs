@@ -23,7 +23,7 @@ namespace timesheets.Forms
         {
             InitializeComponent();
             _model = model;
-            _apiService = new ApiService();
+            _apiService = new ApiService(Properties.Settings.Default.ApiBaseUrl, Properties.Settings.Default.ApiKey);
 
             this.Load += TimeEntryForm_Load;
             this.cmbJob.SelectedIndexChanged += CmbJob_SelectedIndexChanged;

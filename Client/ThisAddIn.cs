@@ -27,7 +27,7 @@ namespace timesheets
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
             // Initialize ApiService
-            _apiService = new ApiService();
+            _apiService = new ApiService(Properties.Settings.Default.ApiBaseUrl, Properties.Settings.Default.ApiKey);
 
             // Offline Timer
             _offlineTimer = new System.Windows.Forms.Timer();
