@@ -11,20 +11,18 @@ namespace timesheets.Services
 {
     public class ApiService
     {
-        private static readonly HttpClient _client;
+        private static HttpClient _client;
         private readonly OfflineQueueService _offlineService;
 
-        static ApiService()
+        public ApiService(string baseUrl, string apiKey)
         {
-            _client = new HttpClient();
-            var baseUrl = timesheets.Properties.Settings.Default.ApiBaseUrl;
-            if (string.IsNullOrEmpty(baseUrl)) baseUrl = "https://localhost:7053/"; // Fallback
-            _client.BaseAddress = new Uri(baseUrl);
-            _client.DefaultRequestHeaders.Add("X-Api-Key", timesheets.Properties.Settings.Default.ApiKey);
-        }
-
-        public ApiService()
-        {
+            if (_client == null)
+            {
+                _client = new HttpClient();
+                if (string.IsNullOrEmpty(baseUrl)) baseUrl = "https://localhost:7053/"; // Fallback
+                _client.BaseAddress = new Uri(baseUrl);
+                _client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+            }
             _offlineService = new OfflineQueueService();
         }
 
@@ -85,7 +83,7 @@ namespace timesheets.Services
             }
         }
 
-        public async Task<bool> SubmitBatchAsync(List<TimeEntryModel> entries, bool enableOfflineQueue = true)
+        public virtual async Task<bool> SubmitBatchAsync(List<TimeEntryModel> entries, bool enableOfflineQueue = true)
         {
              try
             {
