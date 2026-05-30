@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Timesheets.Shared\Timesheets.Shared.csproj" />
+    <ProjectReference Include="..\Server\Timesheets.API\Timesheets.API.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -11,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
