@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{DAD03C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Timesheets.API", "Server\Timesheets.API\Timesheets.API.csproj", "{E8FA372E-9CC9-4129-8D7D-1862C537D291}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Timesheets.Tests", "Timesheets.Tests\Timesheets.Tests.csproj", "{49BEE1C8-1FEA-4675-8258-C1672001FC71}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,18 @@ Global
 		{E8FA372E-9CC9-4129-8D7D-1862C537D291}.Release|x64.Build.0 = Release|Any CPU
 		{E8FA372E-9CC9-4129-8D7D-1862C537D291}.Release|x86.ActiveCfg = Release|Any CPU
 		{E8FA372E-9CC9-4129-8D7D-1862C537D291}.Release|x86.Build.0 = Release|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Debug|x64.Build.0 = Debug|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Debug|x86.Build.0 = Debug|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Release|x64.ActiveCfg = Release|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Release|x64.Build.0 = Release|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Release|x86.ActiveCfg = Release|Any CPU
+		{49BEE1C8-1FEA-4675-8258-C1672001FC71}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
