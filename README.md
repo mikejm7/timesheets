@@ -7,10 +7,11 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 *   **Client/**: The VSTO Outlook Add-in (.NET Framework 4.8).
 *   **Server/**: The Backend Web API (ASP.NET Core 8.0, Entity Framework Core, SQLite).
 *   **Timesheets.Shared/**: Shared data models library (.NET Standard 2.0).
+*   **Timesheets.Tests/**: Unit tests for the shared models, server middleware, and offline queue.
 
 ## Features
 
-- **Outlook Integration**: Manage time entries directly within the Outlook Calendar (Shadow Copy workflow).
+- **Outlook Integration**: Manage time entries directly within the Outlook Calendar. Uses a 'Shadow Copy' workflow where appointments are copied to and managed in a dedicated 'Timesheets' calendar sub-folder, leaving the main calendar unmodified.
 - **Backend API**: RESTful API to store Jobs and Time Entries using SQLite.
 - **Shared Models**: `TimeEntryModel` and `Job` are shared between Client and Server to ensure consistency.
 - **Offline/Sync**: The client synchronizes changes with the backend using an Offline Queue.
@@ -35,7 +36,7 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 3.  Restore NuGet packages for the solution.
 
 ### 2. Database Setup
-1.  Navigate to `/Server`.
+1.  Navigate to `/Server/Timesheets.API`.
 2.  Run `dotnet ef migrations add InitialCreate`.
 3.  Run `dotnet ef database update`.
 
@@ -60,9 +61,22 @@ This repository contains a full-stack solution for managing timesheets via Outlo
 3.  Copy the forwarding URL.
 4.  Update the Client's `ApiBaseUrl` setting.
 
+## Testing
+
+The repository contains a unit test project, `Timesheets.Tests`, which covers:
+- Shared models (`TimeEntryModel`) validation logic.
+- Server middleware (`ApiKeyMiddleware`) security checks.
+- Offline queue concurrency and processing logic.
+
+To run the tests:
+1. Navigate to the root directory or the `Timesheets.Tests` directory.
+2. Run `dotnet test`.
+
+*Note: The VSTO Client project (`Client/timesheets.csproj`) relies on .NET Framework 4.8 and Windows-specific libraries. Therefore, it cannot be built or unit-tested in Linux environments.*
+
 ## Architecture & Notes
 
 - **Database**: Local SQLite file (`timesheets.db`).
-- **Resilience**: The Client uses an offline queue with a "Rename & Lock" strategy to ensure data integrity during sync.
+- **Resilience**: The Client uses an offline queue with a "Rename & Lock" strategy. Offline data is persisted to `timesheets_offline_queue.json` in the user's `AppData` folder. A temporary `.processing` file is used during sync, with automatic crash recovery to append stale processing content back to the main queue to ensure data integrity.
 - **Performance**: The Server uses efficient batch processing (bulk ID lookup) to minimize database round-trips.
 - **Security**: The Server requires an `X-Api-Key` header for all requests.
